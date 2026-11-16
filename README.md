@@ -35,6 +35,7 @@ Put the voiceover into `takes/` (`take1.wav`, `.m4a`, `.mp3` or `.mp4`) and run 
 ```
 [ANIM: the goal fades]             an animation; the paragraphs below it are spoken over it
 [ANIM: one file | lead=5]          5 silent seconds of animation before the voice starts
+[ANIM: go up first | tail=3]       3 silent seconds after the voice ends
 [ANIM: example, purpose | stage=1] shows the stage indicator on stage 1 during this block
 [ANIM: thanks for watching | 7s]   a block nobody speaks over, 7 seconds long
 [CARD: The five stages]            chapter card, 3.5 s of music only

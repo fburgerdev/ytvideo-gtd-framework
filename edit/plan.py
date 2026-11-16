@@ -73,7 +73,7 @@ def estimate(script_dir="writing/script", name="draft"):
                 lines.append({"t": round(s0, 3), "e": round(t + 0.25, 3), "text": " ".join(sent)})
                 t += SENTENCE
             t += PARA
-        out.append(o | {"dur": round(snap(t - PARA - SENTENCE + TAIL), 4), "words": words, "lines": lines})
+        out.append(o | {"dur": round(snap(t - PARA - SENTENCE + TAIL + b["opts"].get("tail", 0)), 4), "words": words, "lines": lines})
     return finish(name, out, {"take": None})
 
 
@@ -106,10 +106,14 @@ def from_take(take, script_dir="writing/script"):
     keep, last_block = [], 0
     for si, s in enumerate(segs):
         inf = info[si]
-        later = [segs[j]["text"] for j in range(si + 1, min(si + 4, len(segs)))]
+        nxt = range(si + 1, min(si + 4, len(segs)))
+        later = [segs[j]["text"] for j in nxt]
         false_start = (inf["score"] < MIN_SCORE and later
                        and norm_words(s["text"])[:3] == norm_words(later[0])[:3])
-        if META.search(s["text"]) or false_start or any(sim(s["text"], t) >= 0.6 for t in later):
+        # said again a moment later = a retake; unless the script itself has two sentences that alike
+        # ("does this fit what I want? Does it fit what I believe?"), then both match their own place
+        both = lambda j: inf["score"] >= 0.8 and info[j]["score"] >= 0.8 and not set(inf["hits"]) & set(info[j]["hits"])
+        if META.search(s["text"]) or false_start or any(sim(s["text"], segs[j]["text"]) >= 0.6 and not both(j) for j in nxt):
             print(f"  retake {s['start']:7.1f}  {s['text'].strip()}")
             continue
         if inf["score"] >= MIN_SCORE and inf["hits"]:
@@ -150,7 +154,8 @@ def from_take(take, script_dir="writing/script"):
                     if p[0] <= w["s"] < p[1]:
                         words.append({"w": w["w"].strip(), "t": round(t0 + w["s"] - p[0], 3)})
             t0 += p[1] - p[0]
-        out.append(o | {"pieces": pieces, "lead": lead, "dur": round(snap(t0), 4), "words": words})
+        tail = b["opts"].get("tail", 0)   # and after it ends
+        out.append(o | {"pieces": pieces, "lead": lead, "tail": tail, "dur": round(snap(t0 + tail), 4), "words": words})
     return finish(take, out, {"take": take})
 
 

@@ -2,7 +2,7 @@
 
 A block starts at a marker line; the paragraphs after it are what is spoken over it.
   [ANIM: the goal fades]            an animation, keyed by the marker's text (see animation/src/anims/index.ts)
-  [ANIM: one file | lead=5]         options after "|": lead=<s> silent seconds before the voice,
+  [ANIM: one file | lead=5]         options after "|": lead=<s> / tail=<s> silent seconds before / after the voice,
                                     stage=<1-5> shows the stage indicator, <n>s the length of a block without words
   [CARD: The five stages]           a chapter card
   [Title: ...]                      the text of the title card, on the line after its [ANIM: title]

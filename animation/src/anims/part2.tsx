@@ -37,8 +37,9 @@ export function* fiveLines(root: Node, b: Block) {
     yield* all(names[i].opacity(1, 0.5), delay(0.5, qs[i].opacity(1, 0.6)),
       ...names.slice(0, i).map(n => n.opacity(0.4, 0.5)), ...qs.slice(0, i).map(q => q.opacity(0.4, 0.5)));
   }
+  // once the last one is said, all five stand there together
   yield* at(b, 'very next thing', 30);
-  yield* waitFor(1.8);
+  yield* waitFor(2.4);
   yield* all(...names.map(n => n.opacity(1, 0.8)), ...qs.map(q => q.opacity(1, 0.8)));
 }
 

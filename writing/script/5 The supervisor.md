@@ -16,7 +16,7 @@ That supervisor is weak, and it gets tired. What the file does is put it outside
 
 [Florian: why this matters to you personally. The ending carries the emotion]
 
-[ANIM: go up first]
+[ANIM: go up first | tail=3]
 
 So if you take one thing from this: before you ask for solutions, from an AI, from a friend, from yourself, go up first. Why am I doing this? And what does it look like when it worked?
 

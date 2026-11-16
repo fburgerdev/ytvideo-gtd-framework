@@ -47,6 +47,7 @@ def voice(blocks, take, out):
             seg = np.pad(seg, (0, n - len(seg)))
             seg[:fade] *= ramp; seg[-fade:] *= ramp[::-1]
             parts.append(seg)
+        parts.append(np.zeros(round(b.get("tail", 0) * sr), dtype=np.float32))
     y = np.concatenate(parts)
     raw = out.with_name("voice-raw.wav")
     with wave.open(str(raw), "wb") as w:

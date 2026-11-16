@@ -211,7 +211,7 @@ export function* goUp(root: Node, b: Block) {
   yield* scene.opacity(0, 0.6);
   const sh = sheet(0, -10, 1);
   root.add(sh.g);
-  yield* sequence(0.18, ...sh.lines.map(l => l.end(1, 0.5, easeInOutCubic)));
+  yield* sequence(0.3, ...sh.lines.map(l => l.end(1, 0.6, easeInOutCubic)));
 }
 
 /** Everything collapses into a point. Then: thanks. Time for the music. */

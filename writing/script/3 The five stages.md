@@ -2,7 +2,7 @@
 
 [CARD: The five stages]
 
-[ANIM: five lines on the page]
+[ANIM: five lines on the page | tail=2]
 
 Then I came across a model from Getting Things Done, a book by David Allen. He describes how our mind plans, when it plans well. Five stages. [check: Allen calls it the natural planning model]
 
