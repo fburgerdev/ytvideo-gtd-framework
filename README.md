@@ -17,6 +17,7 @@ Same look and pipeline idea as video 3 ("Doing good"): Motion Canvas, beige pape
 cd animation && npm install        # once
 python edit/build.py               # silent draft: renders/draft.mp4
 python edit/build.py --only goal   # only the blocks whose key contains "goal"
+python edit/build.py --only 5      # only chapter 5
 python edit/build.py --take take1  # with a recording, see below
 ```
 

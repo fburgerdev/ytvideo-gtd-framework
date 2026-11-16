@@ -4,7 +4,7 @@
                                           #   timed at an estimated speaking pace -> renders/draft.mp4
   python edit/build.py --take take1       # takes/take1.(wav|m4a|mp3|mp4): transcribe, align to the script,
                                           #   time every animation to the voice -> renders/take1.mp4
-  python edit/build.py --only supervisor  # render only the blocks whose key contains the word (quick review)
+  python edit/build.py --only gap         # render only the blocks whose key contains the word, or --only 5 for a chapter
 
 Steps: plan (edit/plan.py) -> animation/src/render-list.json -> Motion Canvas render -> voice on top.
 """
@@ -74,7 +74,9 @@ def main():
     else:
         print("1 plan (estimated timing)"); blocks = P.estimate(script)
     if args.only:
-        blocks = [b for b in blocks if args.only in b["key"]]
+        # a key fragment ("goal"), or a chapter number ("5")
+        sel = (lambda b: b["section"] == int(args.only)) if args.only.isdigit() else (lambda b: args.only in b["key"])
+        blocks = [b for b in blocks if sel(b)]
         name += "-" + args.only
     out = pathlib.Path(args.out) if args.out else ROOT / "renders" / f"{name}.mp4"
     out.parent.mkdir(parents=True, exist_ok=True)

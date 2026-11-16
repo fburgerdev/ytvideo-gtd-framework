@@ -29,8 +29,11 @@ export const ANIMS: Record<string, Anim> = {
   'the-goal-fades': c.goalFades,
   'the-stages-hold-the-thread': c.thread,
   'the-ai-jumps-too': c.aiJumps,
-  'the-supervisor': c.supervisor,
-  'the-supervisor-on-a-page': c.pageSupervisor,
+  'instagram': c.instagram,
+  'the-gap': c.theGap,
+  'the-gap-at-every-scale': c.scales,
+  'meditation-shortens-the-gap': c.meditation,
+  'the-file-closes-the-gap': c.fileCloses,
   'go-up-first': c.goUp,
   'thanks-for-watching': c.thanks,
 };

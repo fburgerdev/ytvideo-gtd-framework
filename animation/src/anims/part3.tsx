@@ -1,7 +1,7 @@
 // Chapters 4 and 5: a goal and steps, the goal fading, the thread; the supervisor; the ending.
 import {Node, Circle, Rect, Line, Spline} from '@motion-canvas/2d';
 import {all, chain, delay, sequence, waitFor, tween, useRandom, easeInOutCubic, easeInOutSine, easeInCubic, easeOutCubic, linear, Vector2} from '@motion-canvas/core';
-import {Block, at, left} from '../lib';
+import {Block, at, cue, left} from '../lib';
 import {BG, INK, MUTED, ACCENT, GOOD, PAPER} from '../style';
 import {T, S, STAGES, sheet, ladder} from './common';
 
@@ -111,83 +111,200 @@ export function* aiJumps(root: Node, b: Block) {
   yield* name.opacity(1, 0.7);
 }
 
-// the mind: a lot that runs by itself, and a small part that watches
-const BLOB: [number, number] = [-270, 30], R = 175;
-function mind(root: Node, seed = 9) {
-  const rnd = useRandom(seed);
-  const inBlob = () => {
-    const a = rnd.nextFloat(0, Math.PI * 2), r = R * Math.sqrt(rnd.nextFloat(0, 1));
-    return new Vector2(BLOB[0] + Math.cos(a) * r, BLOB[1] + Math.sin(a) * r);
-  };
-  root.add(new Circle({size: 2 * R + 70, fill: PAPER, x: BLOB[0], y: BLOB[1]}));
-  const dots = Array.from({length: 38}, () => new Circle({size: rnd.nextFloat(11, 18), fill: MUTED, position: inBlob(), opacity: rnd.nextFloat(0.5, 0.95)}));
-  dots.forEach(d => root.add(d));
-  const drift = (total: number) => all(...dots.map(d => {
-    const n = Math.max(1, Math.round(total / rnd.nextFloat(2.2, 3.4)));
-    return chain(...Array.from({length: n}, () => {
-      const to = d.position().add(new Vector2(rnd.nextFloat(-45, 45), rnd.nextFloat(-45, 45)));
-      const c = new Vector2(BLOB), off = to.sub(c);
-      const p = off.magnitude > R ? c.add(off.scale(R / off.magnitude)) : to;
-      return d.position(p, total / n, easeInOutSine);
-    }));
-  }));
-  return {dots, drift};
-}
-const SUP: [number, number] = [130, -20];
+// The gap: a track with two lanes, what you want (top, green) and what runs by itself (bottom, terracotta).
+// You move along it; drifting off drops you to the lower lane, noticing brings you back up.
+interface Seg { lane: number; frac: number }
 
-export function* supervisor(root: Node, b: Block) {
-  const {drift} = mind(root);
+function track(root: Node, y: number, x0: number, x1: number, segs: Seg[], labels: [string, string], gap = 100, font = 14) {
+  const g = new Node({});
+  root.add(g);
+  const Y = (l: number) => y + l * gap;
+  const guides = [0, 1].map(l => new Line({points: [[x0, Y(l)], [x1, Y(l)]], stroke: MUTED, lineWidth: 2, lineDash: [4, 10], opacity: 0}));
+  const lab = labels.map((t, l) => S(t, font, l ? ACCENT : GOOD, {x: x0 - 24, y: Y(l), offset: [1, 0]}));
+  guides.forEach(n => g.add(n));
+  let x = x0, lane = segs[0].lane;
+  const xs: number[] = [], turns: {i: number; x: number; y: number}[] = [];
+  const lines = segs.map((s, i) => {
+    const dist = s.frac * (x1 - x0), dx = Math.min(34, dist / 2);
+    const pts: [number, number][] = [[x, Y(lane)]];
+    if (s.lane !== lane) pts.push([x + dx, Y(s.lane)]);
+    pts.push([x + dist, Y(s.lane)]);
+    if (lane === 1 && s.lane === 0) turns.push({i, x: x + dx / 2, y: Y(0.5)});
+    xs.push(x);
+    x += dist; lane = s.lane;
+    return new Line({points: pts, stroke: s.lane ? ACCENT : GOOD, lineWidth: 6, lineCap: 'round', lineJoin: 'round', end: 0});
+  });
+  xs.push(x);
+  lines.forEach(l => g.add(l));
+  lab.forEach(l => g.add(l));
+  const head = new Circle({size: 22, fill: INK, x: x0, y: Y(segs[0].lane), opacity: 0});
+  g.add(head);
+  const show = (d = 0.5) => all(head.opacity(1, d), ...guides.map(n => n.opacity(0.35, d)), ...lab.map(n => n.opacity(1, d)));
+  function* play(i: number, d: number) {
+    const l = lines[i];
+    yield* tween(Math.max(d, 0.1), v => { l.end(v); head.position(l.getPointAtPercentage(v).position); });
+  }
+  function drawn() {
+    lines.forEach(l => l.end(1));
+    head.position(lines[lines.length - 1].getPointAtPercentage(1).position);
+    head.opacity(1); guides.forEach(n => n.opacity(0.35)); lab.forEach(n => n.opacity(1));
+  }
+  /** A bracket under a lower-lane segment, labelled. */
+  function bracket(i: number, text = 'THE GAP', below = 30) {
+    const a = xs[i] + 20, e = xs[i + 1], yb = Y(1) + below;
+    const br = new Line({points: [[a, yb - 10], [a, yb], [e, yb], [e, yb - 10]], stroke: ACCENT, lineWidth: 2.5, end: 0});
+    const t = S(text, 13, ACCENT, {x: (a + e) / 2, y: yb + 20});
+    g.add(br); g.add(t);
+    return {br, t, show: (d = 0.6) => all(br.end(1, d, easeInOutCubic), t.opacity(1, d))};
+  }
+  /** The moment of noticing: a ring where you turn back up. */
+  function ring(k: number, size = 40) {
+    const r = new Circle({size, stroke: INK, lineWidth: 4, x: turns[k].x, y: turns[k].y, opacity: 0, scale: 0.6});
+    g.add(r);
+    return r;
+  }
+  return {g, lines, head, lab, guides, xs, turns, Y, show, play, drawn, bracket, ring};
+}
+
+const INSTA: Seg[] = [{lane: 0, frac: 0.24}, {lane: 1, frac: 0.5}, {lane: 0, frac: 0.26}];
+const insta = (root: Node) => track(root, -60, -400, 540, INSTA, ['STUDY', 'INSTAGRAM'], 120, 15);
+
+/** Studying, drifting to Instagram without deciding to, noticing, going back. */
+export function* instagram(root: Node, b: Block) {
   const tag = S('SPECULATION', 14, ACCENT, {x: -600, y: -316, offset: [-1, 0]});
-  const goal = new Circle({size: 32, fill: GOOD, x: 470, y: -60, opacity: 0});
-  const gl = S('WHAT I WANT', 14, GOOD, {x: 470, y: -100});
-  const sup = new Circle({size: 58, stroke: INK, lineWidth: 4, x: -20, y: -230, opacity: 0});
-  const sl = S('SUPERVISOR', 13, INK, {x: SUP[0], y: SUP[1] + 48});
-  const i1 = new Circle({size: 18, fill: INK, x: -110, y: 110, opacity: 0});
-  const i2 = new Circle({size: 18, fill: INK, x: -100, y: -10, opacity: 0});
-  [tag, goal, gl, i1, i2, sup, sl].forEach(n => root.add(n));
-  function* main() {
-    yield* at(b, 'speculation', 3);
-    yield* tag.opacity(1, 0.5);
-    yield* at(b, 'small part that watches', 12.5);
-    yield* sup.opacity(1, 0.7);
-    // one impulse heads off somewhere else: checked, and sent back
-    yield* at(b, 'does this still fit what I want', 16);
-    yield* all(goal.opacity(1, 0.6), gl.opacity(1, 0.6), i1.opacity(1, 0.3), i1.position([130, 190], 1.3, easeOutCubic));
-    yield* sup.position([130, 190], 0.8, easeInOutCubic);
-    yield* i1.fill(ACCENT, 0.3);
-    yield* all(i1.position([-200, 90], 1, easeInOutCubic), delay(0.6, i1.opacity(0, 0.4)));
-    // the next one fits: it may go on, towards the goal
-    yield* at(b, 'Does it fit what I believe', 20);
-    yield* all(i2.opacity(1, 0.3), i2.position(SUP, 1.2, easeOutCubic), sup.position(SUP, 1.2, easeInOutCubic));
-    yield* i2.fill(GOOD, 0.3);
-    yield* i2.position([470, -60], 1.4, easeInOutCubic);
-    yield* i2.opacity(0, 0.3);
-    yield* at(b, 'Supervising the ones', 30);
-    yield* sl.opacity(1, 0.6);
-  }
-  yield* all(drift(b.dur), main());
+  root.add(tag);
+  const tr = insta(root);
+  yield* at(b, 'speculation', 3);
+  yield* tag.opacity(1, 0.5);
+  const t0 = cue(b, 'sit down to study', 5), t1 = cue(b, "you're on Instagram", 10), t2 = cue(b, 'I wanted to study', 22);
+  yield* at(b, null, t0);
+  yield* tr.show();
+  yield* tr.play(0, t1 - t0 - 0.5);
+  yield* tr.play(1, t2 - t1);
+  const r = tr.ring(0);
+  yield* all(tr.play(2, 2.4), r.opacity(1, 0.4), r.scale(1, 0.4, easeOutCubic));
 }
 
-/** The supervisor gets tired; the file puts it on a page, outside the head. */
-export function* pageSupervisor(root: Node, b: Block) {
-  const {drift} = mind(root, 21);
-  const sup = new Circle({size: 58, stroke: INK, lineWidth: 4, x: SUP[0], y: SUP[1]});
-  const sl = S('SUPERVISOR', 13, INK, {x: SUP[0], y: SUP[1] + 48, opacity: 1});
-  const sh = sheet(400, 10, 0.72, true);
-  sh.g.opacity(0);
-  const top = new Vector2(400 - 100 * 0.72 - 34, 10 + sh.ys[0] * 0.72);
-  const tie = new Line({points: [[400 - 150 * 0.72 - 8, 10], [BLOB[0] + R + 44, BLOB[1]]], stroke: GOOD, lineWidth: 3, lineCap: 'round', end: 0});
-  [tie, sh.g, sup, sl].forEach(n => root.add(n));
-  function* main() {
-    yield* at(b, 'weak', 0.8);
-    yield* all(sup.opacity(0.3, 1.6, easeInOutSine), sl.opacity(0.3, 1.6, easeInOutSine));
-    yield* at(b, 'outside my head', 5.5);
-    yield* all(sh.g.opacity(1, 0.8), sl.opacity(0, 0.5),
-      sup.position(top, 1.6, easeInOutCubic), sup.size(30, 1.6, easeInOutCubic), sup.opacity(1, 1.6));
-    yield* at(b, "doesn't forget", 9.5);
-    yield* all(sh.lines[0].stroke(GOOD, 0.7), sup.stroke(GOOD, 0.7), tie.end(1, 1.4, easeInOutCubic));
+/** The same track: what runs by itself, what notices, and the time in between. */
+export function* theGap(root: Node, b: Block) {
+  const tr = insta(root);
+  tr.drawn();
+  const r = tr.ring(0);
+  r.opacity(1); r.scale(1);
+  const nl = S('NOTICES', 13, INK, {x: tr.turns[0].x, y: tr.turns[0].y - 48});
+  const runs = S('RUNS BY ITSELF', 13, ACCENT, {x: (tr.xs[1] + tr.xs[2]) / 2, y: tr.Y(1) - 28});
+  root.add(nl); root.add(runs);
+  const top = [tr.lines[0], tr.lines[2], tr.lab[0]];
+  yield* at(b, 'runs by itself', 3);
+  // only the lower lane while it is the subject; everything else steps back
+  yield* all(...top.map(n => n.opacity(0.3, 0.5)), r.opacity(0.3, 0.5), runs.opacity(1, 0.5));
+  yield* at(b, 'another part notices', 7.5);
+  yield* all(...top.map(n => n.opacity(1, 0.5)), r.opacity(1, 0.5), nl.opacity(1, 0.5));
+  const c = T('consciousness', 50, INK, {y: -250});
+  const cs = S('JUDGING WHAT YOU DO AGAINST WHAT YOU WANT, AND READJUSTING', 14, MUTED, {y: -200});
+  root.add(c); root.add(cs);
+  yield* at(b, 'what we call consciousness', 13);
+  yield* c.opacity(1, 0.7);
+  yield* at(b, 'Judging what', 17);
+  yield* cs.opacity(1, 0.6);
+  const br = tr.bracket(1);
+  yield* at(b, "that's the gap", 25);
+  yield* all(br.show(), runs.opacity(0, 0.4));
+}
+
+const SCALES: {name: string; labels: [string, string]; segs: Seg[]}[] = [
+  {name: 'seconds', labels: ['STUDY', 'INSTAGRAM'], segs: [{lane: 0, frac: 0.3}, {lane: 1, frac: 0.12}, {lane: 0, frac: 0.58}]},
+  {name: 'a day', labels: ['THE ONE THING', 'MAILS'], segs: [{lane: 0, frac: 0.1}, {lane: 1, frac: 0.78}, {lane: 0, frac: 0.12}]},
+  {name: 'years', labels: ['WHAT I WANT', 'WHAT CAME NEXT'], segs: [{lane: 0, frac: 0.06}, {lane: 1, frac: 0.88}, {lane: 0, frac: 0.06}]},
+];
+
+/** Seconds, a day, years: the same move, a longer gap. */
+export function* scales(root: Node, b: Block) {
+  const ys = [-250, -40, 170];
+  const trs = SCALES.map((s, k) => track(root, ys[k], -330, 520, s.segs, s.labels, 56, 13));
+  const names = SCALES.map((s, k) => T(s.name, 28, INK, {x: -330, y: ys[k] - 42, offset: [-1, 0]}));
+  names.forEach(n => root.add(n));
+  function* run(k: number, a: string, z: string, fa: number, fz: number) {
+    const ta = cue(b, a, fa), tz = cue(b, z, fz);
+    yield* at(b, null, ta);
+    yield* all(trs[k].show(), names[k].opacity(1, 0.5));
+    const seg = SCALES[k].segs;
+    const d = Math.max(1.5, tz - ta), f = seg[0].frac + seg[1].frac;
+    yield* trs[k].play(0, d * seg[0].frac / f);
+    yield* trs[k].play(1, d * seg[1].frac / f);
+    const r = trs[k].ring(0, 30);
+    yield* all(trs[k].play(2, 0.8), r.opacity(1, 0.3), r.scale(1, 0.3));
   }
-  yield* all(drift(b.dur), main());
+  yield* run(0, 'not only about Instagram', 'not only about Instagram', 0.5, 2.5);
+  yield* run(1, 'You plan to do', 'six in the evening', 3, 9);
+  yield* run(2, 'Or over years', 'one day you ask', 12, 18);
+  yield* at(b, 'Only the gap gets longer', 22);
+  yield* sequence(0.5, ...trs.map(t => t.bracket(1, 'THE GAP', 22).show()));
+}
+
+const MED: Seg[] = [
+  {lane: 0, frac: 0.07}, {lane: 1, frac: 0.25}, {lane: 0, frac: 0.08}, {lane: 1, frac: 0.16},
+  {lane: 0, frac: 0.09}, {lane: 1, frac: 0.09}, {lane: 0, frac: 0.1}, {lane: 1, frac: 0.04}, {lane: 0, frac: 0.12},
+];
+
+/** Meditation: wander, notice, come back, again and again; the gaps get shorter. */
+export function* meditation(root: Node, b: Block) {
+  const tr = track(root, -10, -400, 540, MED, ['BREATH', 'WANDERING'], 110, 15);
+  const half = T('almost half the time we’re awake', 40, INK, {y: -250});
+  const med = T('meditation', 50, INK, {y: -250});
+  root.add(half); root.add(med);
+  yield* at(b, 'almost half', 4);
+  yield* half.opacity(1, 0.6);
+  yield* at(b, "That's what meditation is", 10);
+  yield* all(half.opacity(0, 0.5), delay(0.4, med.opacity(1, 0.6)));
+  const t0 = cue(b, 'You sit', 12), t1 = cue(b, 'mind wanders off', 15), t2 = cue(b, 'you come back', 18);
+  yield* at(b, null, t0);
+  yield* tr.show();
+  yield* tr.play(0, t1 - t0);
+  yield* tr.play(1, t2 - t1);
+  // the rest, evenly paced until the block ends; each noticing leaves its ring, each gap its bracket
+  const rest = Math.max(4, b.dur - 1.2 - t2);
+  const fr = MED.slice(2).reduce((s, x) => s + x.frac, 0);
+  const r0 = tr.ring(0, 30), b0 = tr.bracket(1, '', 22);
+  let k = 1;
+  for (let i = 2; i < MED.length; i++) {
+    const d = rest * MED[i].frac / fr;
+    if (i === 2) { yield* all(tr.play(i, d), r0.opacity(1, 0.3), r0.scale(1, 0.3), b0.show(0.4)); continue; }
+    if (MED[i].lane === 0 && MED[i - 1].lane === 1) {
+      const r = tr.ring(k, 30), br = tr.bracket(i - 1, '', 22);
+      k++;
+      yield* all(tr.play(i, d), r.opacity(1, 0.3), r.scale(1, 0.3), br.show(0.4));
+    } else yield* tr.play(i, d);
+  }
+}
+
+/** In my head the gap is weeks; on a page it closes early. */
+export function* fileCloses(root: Node, b: Block) {
+  const A1: Seg[] = [{lane: 0, frac: 0.14}, {lane: 1, frac: 0.7}, {lane: 0, frac: 0.16}];
+  const A2: Seg[] = [{lane: 0, frac: 0.14}, {lane: 1, frac: 0.12}, {lane: 0, frac: 0.74}];
+  const t1 = track(root, -200, -330, 520, A1, ['THE GOAL', 'SOLUTIONS'], 70, 13);
+  const t2 = track(root, 90, -330, 520, A2, ['THE GOAL', 'SOLUTIONS'], 70, 13);
+  const n1 = T('in my head', 28, INK, {x: -330, y: -246, offset: [-1, 0]});
+  const n2 = T('on a page', 28, INK, {x: -330, y: 44, offset: [-1, 0]});
+  root.add(n1); root.add(n2);
+  yield* at(b, 'In my head', 3);
+  yield* all(t1.show(), n1.opacity(1, 0.5));
+  yield* t1.play(0, 0.6);
+  yield* t1.play(1, 2.6);
+  const r1 = t1.ring(0, 30);
+  yield* all(t1.play(2, 0.6), r1.opacity(1, 0.3), r1.scale(1, 0.3));
+  yield* at(b, 'On a page', 9);
+  yield* all(t2.show(), n2.opacity(1, 0.5));
+  // the page sits where you turn back
+  const pg = sheet(t2.turns[0].x, t2.Y(0) - 52, 0.16, true);
+  pg.g.opacity(0);
+  t2.g.add(pg.g);
+  yield* t2.play(0, 0.6);
+  yield* all(t2.play(1, 0.6), pg.g.opacity(1, 0.4));
+  const r2 = t2.ring(0, 30);
+  yield* all(t2.play(2, 2.4), r2.opacity(1, 0.3), r2.scale(1, 0.3), pg.lines[0].stroke(GOOD, 0.5));
+  yield* at(b, "doesn't get tired", 20);
+  yield* sequence(0.4, t1.bracket(1, 'WEEKS', 22).show(), t2.bracket(1, 'EARLY', 22).show());
 }
 
 /** The one thing to take along: go up before asking for solutions. */
