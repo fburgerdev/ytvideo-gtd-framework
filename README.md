@@ -57,3 +57,18 @@ From the feedback rounds on video 2 (`writing/feedback/summary.md` there) and vi
 - Chapter cards name the topic in a few words, with a few seconds of music only.
 - The video opens with animation before the voice and ends with everything collapsing into a point, then "Thanks for watching".
 - Key terms appear on screen on the word ("reactive planning").
+
+## Every build Florian is to watch ends with a snapshot
+
+Florian reviews in Video Kit (`fburgerdev/app-ytvideo-kit`, at http://localhost:4400, started by app-ai). `build.py` overwrites `renders/draft.mp4`, so without a kept copy there is nothing to compare the next version with. So, after every build he is to watch:
+
+1. Commit the script first, so the version records which script it was built from.
+2. Keep the render as the next version, with a note of what changed since the last one:
+
+```
+node %LOCALAPPDATA%\app-ai\repos\fburgerdev\app-ytvideo-kit\bin\snapshot.mjs . --video renders/draft.mp4 --plan edit/work/draft/plan.json --changes changes.json
+```
+
+With a take, `--video` and `--plan` name that build's render and `edit/work/<take>/plan.json`. This writes `renders/versions/v<N>.mp4` and `v<N>.review.json` beside it (scenes, word times, the script commit, the change notes). `changes.json` is `[{"scene": "<scene id>", "note": "what changed", "comment": "c4"}]`: scene ids are the block keys in `plan.json`, `comment` the id of the comment it answers; both optional.
+
+His comments are in `writing/feedback/review-v<N>.md`, by time, with the scene and the words spoken. "Look at the comments and iterate" means: read the newest one, change what it asks, build, snapshot. Renders, takes and recordings are not in git and stay in this copy.
