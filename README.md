@@ -1,4 +1,4 @@
-# Video GTD
+# GTD Framework
 
 Video 4 for Florian's YouTube channel: the five stages of planning from *Getting Things Done* (purpose, vision, brainstorm, organise, next action), told through how one file with those five lines changed the way he works with his AI. Started 16-11-2026.
 
