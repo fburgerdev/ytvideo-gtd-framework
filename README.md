@@ -6,8 +6,8 @@ Same look and pipeline idea as video 3 ("Doing good"): Motion Canvas, beige pape
 
 ## Where things are
 
-- `writing/structure.md`: purpose, vision, common thread and the chapter plan for draft 3.
-- `writing/script/*.md`: the script, one file per chapter. Markers decide what is on screen (see below). `[Outcome: ...]`, `[Beat: ...]` and other bracket lines are planning notes the build ignores.
+- `writing/structure.md`: purpose, vision, common thread and the decisions behind draft 3.
+- `writing/script/vN.md`: the script, one file per version, as Video Kit expects; the newest is built. `#` headings are the sections; the `> Outcome:` above the first `#` is the video's goal, the one under each heading the section's. Iterate the goals with the text. Markers decide what is on screen (see below); `[Beat: ...]` and other bracket lines are planning notes the build ignores.
 - `animation/`: the Motion Canvas project. One function per animation in `src/anims/`, keyed by its marker's text in `src/anims/index.ts`. `src/scenes/timeline.tsx` plays them back to back, with the stage indicator in the top right corner.
 - `edit/`: turns the script (and later a recording) into a timed render.
 - `renders/`: the videos. Not in git.

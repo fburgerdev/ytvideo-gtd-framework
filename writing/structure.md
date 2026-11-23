@@ -14,17 +14,9 @@ A week later they have copied the file from the description, tried it and are st
 
 We're good at the end of thinking and bad at the beginning. Chapter 2 shows the symptoms without naming them, chapter 3 names them (purpose and vision are the beginning nobody does), and chapter 4 explains why it goes missing.
 
-## Chapters (~10 min)
+## Sections (~10 min)
 
-| # | Chapter | The viewer leaves it with |
-| --- | --- | --- |
-| 1 | The file | Curiosity: one file changed everything. What's in it? |
-| 2 | Jumping to solutions | Recognition: "I do that too", with AI, in meetings, alone. |
-| 3 | The five stages | The method, seen working on something real (this video), and the name for what was missing. |
-| 4 | The gap | Why it works: the mind drifts, the supervisor is weak, the file holds the goal. |
-| 5 | Off the screen | The pattern without AI: prepare the purpose of a meeting alone, beforehand. |
-| 6 | All the way up | A glimpse: the same five steps at every altitude. |
-| 7 | Your turn | One concrete thing to try today, with the file in the description. |
+The Outcome of the video and of every section lives in the script (`writing/script/v1.md`, `> Outcome:` lines), so there's one copy to iterate: The file, Jumping to solutions, The five stages, The gap, Off the screen, All the way up, Your turn.
 
 ## Decided
 
