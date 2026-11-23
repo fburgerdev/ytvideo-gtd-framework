@@ -1,4 +1,10 @@
-"""Parse writing/script/*.md into blocks.
+"""Parse the script into blocks.
+
+The script is one file per version, writing/script/v1.md, v2.md, ... (as in video 3 and Video Kit); the
+newest is the one built. Its # headings are the sections, numbered in order; ## and ### headings, lines
+starting with > (what a part is to achieve: "> Outcome: ...") and everything above the first # heading
+(what the whole video is to achieve) are not spoken and are skipped.
+A folder without vN.md files is read the older way: one file per section, "<n> <title>.md".
 
 A block starts at a marker line; the paragraphs after it are what is spoken over it.
   [ANIM: the goal fades]            an animation, keyed by the marker's text (see animation/src/anims/index.ts)
@@ -33,17 +39,43 @@ def options(parts):
     return o
 
 
+VFILE = re.compile(r"^v(\d+)\.md$", re.I)
+
+
+def newest(script_dir):
+    """The newest version file in the folder, or None."""
+    files = [f for f in pathlib.Path(script_dir).glob("*.md") if VFILE.match(f.name)]
+    return max(files, key=lambda f: int(VFILE.match(f.name).group(1))) if files else None
+
+
+def sections(script):
+    """[(number, title, lines)]: from one version file cut at its # headings, or from a folder of section files."""
+    p = pathlib.Path(script)
+    f = p if p.is_file() else newest(p)
+    if f is not None:
+        out = []
+        for line in f.read_text(encoding="utf-8").splitlines():
+            m = re.match(r"^#\s+(.+?)\s*#*\s*$", line.rstrip())
+            if m:
+                out.append((len(out) + 1, m.group(1), []))
+            elif out:
+                out[-1][2].append(line)
+        return out
+    out = []
+    for f in sorted(p.glob("*.md")):
+        m = re.match(r"(\d+)\s+(.*)\.md", f.name)
+        if m:
+            out.append((int(m.group(1)), m.group(2), f.read_text(encoding="utf-8").splitlines()))
+    return out
+
+
 def parse(script_dir):
     blocks = []
-    for f in sorted(pathlib.Path(script_dir).glob("*.md")):
-        m = re.match(r"(\d+)\s+(.*)\.md", f.name)
-        if not m:
-            continue
-        sec, sec_title = int(m.group(1)), m.group(2)
+    for sec, sec_title, lines in sections(script_dir):
         cur = None
-        for line in f.read_text(encoding="utf-8").splitlines():
+        for line in lines:
             line = line.strip()
-            if not line or line.startswith("#"):
+            if not line or line.startswith("#") or line.startswith(">"):
                 continue
             mm = MARK.match(line)
             if mm:
