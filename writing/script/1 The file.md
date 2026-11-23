@@ -1,14 +1,10 @@
 # The file
 
-Draft 16-11-2026, by Claude from Florian's notes of 15-11-2026. The spine and the ideas are Florian's; the sentences are placeholders for him to rewrite in his own voice. Lines in square brackets that start with "Florian:" mark where a moment of his own belongs. [check] marks a fact to verify before recording.
+[Outcome: curiosity. One file changed how Florian works with his AI, and the viewer wants to know what's in it.]
 
-[ANIM: one file | lead=5]
+[Beat: you gave Claude one file with five steps to spar with you]
+[Beat: you expected it to help; it was a complete game changer, insane how much one file changed]
+[Beat: two steps, first "don't jump into suggestions", then the five stages; this chapter only hints at them]
+[Beat: the title card]
 
-A few months ago, I gave my AI a single file. One page. Five steps from a book about productivity.
-
-I expected it to help a little. It changed everything about how I work.
-
-And I think the reason says something about how we think. And where we go wrong.
-
-[ANIM: title]
-[Title: The five lines I gave my AI]
+[Reusable from draft 2: one file, title]
